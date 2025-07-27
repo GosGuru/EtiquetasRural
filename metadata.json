@@ -1,0 +1,6 @@
+{
+  "name": "Generador de Etiquetas de Código de Barras",
+  "description": "Una aplicación simple para generar e imprimir etiquetas de códigos de barras a partir de datos pegados desde Excel. Copia tus datos (Código, Descripción, Cantidad), pégalos en la aplicación y imprime las etiquetas necesarias.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
