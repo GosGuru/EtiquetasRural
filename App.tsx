@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { LabelData } from "./types";
 import { PasteIcon, DownloadIcon, TrashIcon } from "./components/Icons";
+import LabelPreview from "./components/LabelPreview";
 
 /**
  * Removes invisible characters (like zero-width spaces) from a string.
@@ -312,23 +313,18 @@ const App: React.FC = () => {
               <div>
                 <h2 className="text-2xl font-semibold">Etiquetas a Generar</h2>
                 <p className="text-sm text-slate-500">
-                  Se encontraron {labels.length} productos para un total de{" "}
-                  {totalLabelsToPrint} etiquetas.
+                  Se encontraron {labels.length} productos para un total de {totalLabelsToPrint} etiquetas.
                 </p>
               </div>
               <div>
                 <button
                   onClick={handleDownloadTxt}
-                  className={`inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${
-                    labels.length === 0 ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                  className={`inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${labels.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                   aria-label="Generar y descargar archivo TXT para impresora"
                   disabled={labels.length === 0 || processing}
                 >
                   <DownloadIcon className="h-5 w-5" />
-                  {processing
-                    ? "Generando..."
-                    : `Generar y Descargar TXT (${totalLabelsToPrint})`}
+                  {processing ? "Generando..." : `Generar y Descargar TXT (${totalLabelsToPrint})`}
                 </button>
                 <button
                   onClick={clearAll}
@@ -340,56 +336,27 @@ const App: React.FC = () => {
               </div>
             </div>
 
+            {/* Tabla de etiquetas */}
             <div className="flow-root">
               <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
                 <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
                   <table className="min-w-full divide-y divide-slate-300">
                     <thead>
                       <tr>
-                        <th
-                          scope="col"
-                          className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-slate-900 sm:pl-0"
-                        >
-                          Código de Artículo
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-3 py-3.5 text-left text-sm font-semibold text-slate-900"
-                        >
-                          Descripción
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-3 py-3.5 text-left text-sm font-semibold text-slate-900"
-                        >
-                          Cant. Etiquetas
-                        </th>
-                        <th
-                          scope="col"
-                          className="relative py-3.5 pl-3 pr-4 sm:pr-0 w-12"
-                        >
-                          <span className="sr-only">Eliminar</span>
-                        </th>
+                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-slate-900 sm:pl-0">Código de Artículo</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-slate-900">Descripción</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-slate-900">Cant. Etiquetas</th>
+                        <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-0 w-12"><span className="sr-only">Eliminar</span></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 bg-white">
                       {labels.map((label) => (
                         <tr key={label.id}>
-                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-slate-900 sm:pl-0">
-                            {label.code}
-                          </td>
-                          <td className="px-3 py-4 text-sm text-slate-500">
-                            {label.description}
-                          </td>
-                          <td className="px-3 py-4 text-sm text-slate-500 text-center">
-                            {label.quantity}
-                          </td>
+                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-slate-900 sm:pl-0">{label.code}</td>
+                          <td className="px-3 py-4 text-sm text-slate-500">{label.description}</td>
+                          <td className="px-3 py-4 text-sm text-slate-500 text-center">{label.quantity}</td>
                           <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                            <button
-                              onClick={() => handleRemoveLabel(label.id)}
-                              className="text-red-600 hover:text-red-900"
-                              aria-label={`Eliminar etiqueta para ${label.code}`}
-                            >
+                            <button onClick={() => handleRemoveLabel(label.id)} className="text-red-600 hover:text-red-900" aria-label={`Eliminar etiqueta para ${label.code}`}>
                               <TrashIcon className="h-5 w-5" />
                             </button>
                           </td>
@@ -400,6 +367,9 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Vista previa de bloques Fingerprint */}
+            <LabelPreview labels={labels} />
           </>
         )}
       </main>
