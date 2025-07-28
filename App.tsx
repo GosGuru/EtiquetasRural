@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { LabelData } from "./types";
 import { PasteIcon, DownloadIcon, TrashIcon } from "./components/Icons";
-import LabelPreview from "./components/LabelPreview";
+import LabelCardEditable from "./components/LabelCardEditable";
 
 /**
  * Removes invisible characters (like zero-width spaces) from a string.
@@ -137,8 +137,16 @@ const App: React.FC = () => {
     }
   };
 
+
   const handleRemoveLabel = (id: string) => {
     setLabels((currentLabels) => currentLabels.filter((l) => l.id !== id));
+    setSuccess(null);
+  };
+
+  const handleQuantityChange = (id: string, qty: number) => {
+    setLabels((currentLabels) =>
+      currentLabels.map(l => l.id === id ? { ...l, quantity: qty } : l)
+    );
     setSuccess(null);
   };
 
@@ -271,21 +279,21 @@ const App: React.FC = () => {
 
   return (
     <>
-      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8" style={{ background: '#F5F5F5', minHeight: '100vh' }}>
         <header className="mb-8 text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+          <h1 className="text-4xl font-bold tracking-tight" style={{ color: '#388E3C', fontFamily: 'Montserrat, Arial, sans-serif', letterSpacing: 1 }}>
             Generador de Archivos para Etiquetas
           </h1>
-          <p className="mt-4 text-lg text-slate-600">
-            Pega tus datos de SAP o Excel para crear un archivo (.txt) listo
-            para impresoras industriales.
+          <p className="mt-4 text-lg" style={{ color: '#4CAF50', fontWeight: 500 }}>
+            Pega tus datos de SAP o Excel para crear un archivo (.txt) listo para impresoras industriales de <span style={{ color: '#222', fontWeight: 700 }}>Almacén Rural</span>.
           </p>
         </header>
 
-        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+        <div style={{ background: '#fff', border: '2px solid #4CAF50', borderRadius: 16, boxShadow: '0 2px 12px 0 #388E3C22', padding: 32, marginBottom: 32 }}>
           <label
             htmlFor="data-input"
-            className="block text-sm font-medium text-slate-700 mb-2"
+            className="block text-sm font-semibold mb-2"
+            style={{ color: '#388E3C', fontSize: 16 }}
           >
             Pega la tabla completa aquí (con encabezados):
           </label>
@@ -293,17 +301,17 @@ const App: React.FC = () => {
             id="data-input"
             ref={pasteAreaRef}
             rows={8}
-            className="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-4 font-mono placeholder-slate-400"
-            placeholder={
-              "Pega aquí la tabla copiada directamente desde tu sistema..."
-            }
+            className="block w-full font-mono placeholder-slate-400"
+            style={{ borderRadius: 8, border: '1.5px solid #4CAF50', padding: 16, fontSize: 15, background: '#F1F8E9', color: '#222', outline: 'none', boxShadow: '0 1px 4px #388E3C11' }}
+            placeholder={"Pega aquí la tabla copiada directamente desde tu sistema..."}
             aria-label="Área para pegar datos"
             onChange={handleInputChange}
             aria-invalid={!!error}
           />
           {error && (
             <div
-              className="mt-3 text-sm text-red-600 bg-red-50 p-3 rounded-md"
+              className="mt-3 text-sm"
+              style={{ color: '#d32f2f', background: '#FFEBEE', padding: 12, borderRadius: 8, fontWeight: 600 }}
               role="alert"
             >
               {error}
@@ -311,7 +319,8 @@ const App: React.FC = () => {
           )}
           {success && (
             <div
-              className="mt-3 text-sm text-green-700 bg-green-50 p-3 rounded-md"
+              className="mt-3 text-sm"
+              style={{ color: '#388E3C', background: '#E8F5E9', padding: 12, borderRadius: 8, fontWeight: 600 }}
               role="status"
             >
               {success}
@@ -320,7 +329,20 @@ const App: React.FC = () => {
           <div className="mt-4 flex justify-end">
             <button
               onClick={handleProcessData}
-              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              className="inline-flex items-center gap-2 font-semibold shadow-sm"
+              style={{
+                background: '#388E3C',
+                color: '#fff',
+                borderRadius: 8,
+                padding: '10px 24px',
+                fontSize: 15,
+                transition: 'background 0.2s',
+                boxShadow: '0 2px 8px #388E3C22',
+                outline: 'none',
+                border: 'none',
+                cursor: processing ? 'not-allowed' : 'pointer',
+                opacity: processing ? 0.7 : 1,
+              }}
               aria-label="Procesar y añadir a la lista"
               disabled={processing}
             >
@@ -332,17 +354,30 @@ const App: React.FC = () => {
 
         {labels.length > 0 && (
           <>
-            <div className="mb-6 flex justify-between items-center">
+            <div className="mb-6 flex flex-col sm:flex-row justify-between items-center" style={{ gap: 16 }}>
               <div>
-                <h2 className="text-2xl font-semibold">Etiquetas a Generar</h2>
-                <p className="text-sm text-slate-500">
+                <h2 className="text-2xl font-bold" style={{ color: '#388E3C', fontFamily: 'Montserrat, Arial, sans-serif' }}>Etiquetas a Generar</h2>
+                <p className="text-sm" style={{ color: '#49864bff', fontWeight: 500 }}>
                   Se encontraron {labels.length} productos para un total de {totalLabelsToPrint} etiquetas.
                 </p>
               </div>
-              <div>
+              <div style={{ display: 'flex', gap: 12 }}>
                 <button
                   onClick={handleDownloadTxt}
-                  className={`inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${labels.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                  className="inline-flex items-center gap-2 font-semibold shadow-sm"
+                  style={{
+                    background: '#4CAF50',
+                    color: '#fff',
+                    borderRadius: 8,
+                    padding: '10px 20px',
+                    fontSize: 15,
+                    transition: 'background 0.2s',
+                    boxShadow: '0 2px 8px #388E3C22',
+                    outline: 'none',
+                    border: 'none',
+                    cursor: labels.length === 0 || processing ? 'not-allowed' : 'pointer',
+                    opacity: labels.length === 0 || processing ? 0.7 : 1,
+                  }}
                   aria-label="Generar y descargar archivo TXT para impresora"
                   disabled={labels.length === 0 || processing}
                 >
@@ -351,7 +386,19 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={clearAll}
-                  className="ml-3 inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                  className="inline-flex items-center gap-2 font-semibold shadow-sm"
+                  style={{
+                    background: '#d32f2f',
+                    color: '#fff',
+                    borderRadius: 8,
+                    padding: '10px 20px',
+                    fontSize: 15,
+                    transition: 'background 0.2s',
+                    boxShadow: '0 2px 8px #d32f2f22',
+                    outline: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
                 >
                   <TrashIcon className="h-5 w-5" />
                   Limpiar Todo
@@ -359,40 +406,17 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Tabla de etiquetas */}
-            <div className="flow-root">
-              <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-                <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-                  <table className="min-w-full divide-y divide-slate-300">
-                    <thead>
-                      <tr>
-                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-slate-900 sm:pl-0">Código de Artículo</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-slate-900">Descripción</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-slate-900">Cant. Etiquetas</th>
-                        <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-0 w-12"><span className="sr-only">Eliminar</span></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 bg-white">
-                      {labels.map((label) => (
-                        <tr key={label.id}>
-                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-slate-900 sm:pl-0">{label.code}</td>
-                          <td className="px-3 py-4 text-sm text-slate-500">{label.description}</td>
-                          <td className="px-3 py-4 text-sm text-slate-500 text-center">{label.quantity}</td>
-                          <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                            <button onClick={() => handleRemoveLabel(label.id)} className="text-red-600 hover:text-red-900" aria-label={`Eliminar etiqueta para ${label.code}`}>
-                              <TrashIcon className="h-5 w-5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+            {/* Vista previa tipo etiqueta impresa, editable */}
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center" }}>
+              {labels.map(label => (
+                <LabelCardEditable
+                  key={label.id}
+                  label={label}
+                  onDelete={handleRemoveLabel}
+                  onQuantityChange={handleQuantityChange}
+                />
+              ))}
             </div>
-
-            {/* Vista previa de bloques Fingerprint */}
-            <LabelPreview labels={labels} />
           </>
         )}
       </main>
