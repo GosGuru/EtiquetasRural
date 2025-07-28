@@ -165,22 +165,21 @@ const App: React.FC = () => {
     setError(null);
     setSuccess(null);
 
-    // ASCII Control Characters
-    const STX = "\x02"; // Start of Text
-    const ETX = "\x03"; // End of Text
-    const ESC = "\x1b"; // Escape
-    const LF = "\x0a"; // Line Feed (solo en asignaciones)
-    const US = "\x1f"; // Unit Separator (cantidad)
-    const ETB = "\x17"; // End of Transmission Block
-    const CAN = "\x18"; // Cancel
+    // Caracteres de control como texto literal
+    const STX = "<STX>";
+    const ETX = "<ETX>";
+    const ESC = "<ESC>";
+    const LF  = "<LF>";
+    const US  = "<US>";
+    const ETB = "<ETB>";
+    const CAN = "<CAN>";
+    const SI  = "<SI>";
 
-    const commands: string[] = [];
-
-    // === Cabecera fija ===
-    commands.push(
-      `${STX}SIg1,420${ETX}`,
-      `${STX}SId5${ETX}`,
-      `${STX}SIs50${ETX}`,
+    // Cabecera fija (idéntica a SAP)
+    const header = [
+      `${STX}${SI}g1,420${ETX}`,
+      `${STX}${SI}d5${ETX}`,
+      `${STX}${SI}s50${ETX}`,
       `${STX}${ESC}P;${ETX}`,
       `${STX}E1,1;A1,ETIQ2J;${ETX}`,
       `${STX}L39;D0;${ETX}`,
@@ -196,33 +195,57 @@ const App: React.FC = () => {
       `${STX}I0;o110,220;f1;c25;h12;w12;${ETX}`,
       `${STX}I1;o110,490;f1;c25;h12;w12;${ETX}`,
       `${STX}I2;o110,740;f1;c25;h12;w12;${ETX}`,
-      `${STX}R${ETX}`
-    );
+      `${STX}R${ETX}`,
+      ""
+    ];
 
-    // === Bloques dinámicos ===
-    labels.forEach((label) => {
-      const [linea1, linea2] = splitDescription(label.description);
-      commands.push(
-        `${STX}${ESC}E1${CAN}${ETX}` +
-          `${STX}${ESC}F"BR0"${LF}${label.code}${ETX}` +
-          `${STX}${ESC}F"BR1"${LF}${label.code}${ETX}` +
-          `${STX}${ESC}F"BR2"${LF}${label.code}${ETX}` +
-          `${STX}${ESC}F"TX3"${LF}${linea1}${ETX}` +
-          `${STX}${ESC}F"TX4"${LF}${linea2}${ETX}` +
-          `${STX}${ESC}F"TX5"${LF}${linea1}${ETX}` +
-          `${STX}${ESC}F"TX6"${LF}${linea2}${ETX}` +
-          `${STX}${ESC}F"TX7"${LF}${linea1}${ETX}` +
-          `${STX}${ESC}F"TX8"${LF}${linea2}${ETX}` +
-          `${STX}${US}${label.quantity}${ETX}` +
-          `${STX}${ETB}${ETX}`
+    // Genera bloques igual que el script Python
+    function buildMainBlock(code: string, line1: string, line2: string, qty: number): string {
+      return (
+        `${STX}${ESC}E1${CAN}${ETX}\r\n` +
+        `${STX}${ESC}F"BR0"${LF}${code}${ETX}\r\n` +
+        `${STX}${ESC}F"BR1"${LF}${code}${ETX}\r\n` +
+        `${STX}${ESC}F"BR2"${LF}${code}${ETX}\r\n` +
+        `${STX}${ESC}F"TX3"${LF}${line1}${ETX}\r\n` +
+        `${STX}${ESC}F"TX4"${LF}${line2}${ETX}\r\n` +
+        `${STX}${ESC}F"TX5"${LF}${line1}${ETX}\r\n` +
+        `${STX}${ESC}F"TX6"${LF}${line2}${ETX}\r\n` +
+        `${STX}${ESC}F"TX7"${LF}${line1}${ETX}\r\n` +
+        `${STX}${ESC}F"TX8"${LF}${line2}${ETX}\r\n` +
+        `${STX}${US}${qty}${ETX}\r\n` +
+        `${STX}${ETB}${ETX}\r\n`
       );
+    }
+
+    function buildResidualBlock(code: string, line1: string, line2: string): string {
+      return (
+        `${STX}${ESC}E1${CAN}${ETX}\r\n` +
+        `${STX}${ESC}F"BR0"${LF}${code}${ETX}\r\n` +
+        `${STX}${ESC}F"TX3"${LF}${line1}${ETX}\r\n` +
+        `${STX}${ESC}F"TX4"${LF}${line2}${ETX}\r\n` +
+        `${STX}${US}1${ETX}\r\n` +
+        `${STX}${ETB}${ETX}\r\n`
+      );
+    }
+
+    const blocks: string[] = [];
+    labels.forEach((label) => {
+      const [line1, line2] = splitDescription(label.description);
+      const qty = label.quantity;
+      if (qty > 1) {
+        blocks.push(buildMainBlock(label.code, line1, line2, qty - 1));
+        blocks.push(buildResidualBlock(label.code, line1, line2));
+      } else if (qty === 1) {
+        blocks.push(buildMainBlock(label.code, line1, line2, 1));
+      }
     });
 
-    // === Generar archivo SIN saltos extra ===
-    const fileContent = commands.join("");
-    const blob = new Blob([fileContent], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
+    // Une cabecera y bloques, separados por CRLF
+    const fileContent = [...header, ...blocks].join("\r\n");
 
+    // Descargar como texto plano
+    const blob = new Blob([fileContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.download = "etiquetas_generadas_fingerprint.txt";
