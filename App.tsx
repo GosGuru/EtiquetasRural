@@ -2,6 +2,8 @@ import React, { useState, useRef } from "react";
 import { LabelData } from "./types";
 import { PasteIcon, DownloadIcon, TrashIcon } from "./components/Icons";
 import LabelCardEditable from "./components/LabelCardEditable";
+import AddLabelModal from "./components/AddLabelModal";
+import AddIcon from "@mui/icons-material/Add";
 
 /**
  * Removes invisible characters (like zero-width spaces) from a string.
@@ -51,6 +53,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const pasteAreaRef = useRef<HTMLTextAreaElement>(null);
 
   // UX: Limpiar mensajes al cambiar datos
@@ -110,16 +113,17 @@ const App: React.FC = () => {
         const code = columns[codeIndex];
         const description = sanitizeString(columns[descIndex]);
         const quantityStr = columns[qtyIndex];
-        if (code && description && quantityStr) {
-          const quantity = parseInt(quantityStr, 10);
-          if (!isNaN(quantity) && quantity > 0) {
-            newLabels.push({
-              id: `label-${Date.now()}-${index}`,
-              code,
-              description,
-              quantity,
-            });
+        let quantity = 0;
+        if (code && description) {
+          if (quantityStr && !isNaN(parseInt(quantityStr, 10))) {
+            quantity = parseInt(quantityStr, 10);
           }
+          newLabels.push({
+            id: `label-${Date.now()}-${index}`,
+            code,
+            description,
+            quantity,
+          });
         }
       }
     });
@@ -132,7 +136,7 @@ const App: React.FC = () => {
       setSuccess("Datos procesados correctamente.");
     } else {
       setError(
-        "No se encontraron datos válidos para procesar. Verifique que las filas de datos tengan valores y que 'Cantidad de Etiquetas' sea un número mayor a 0."
+        "No se encontraron datos válidos para procesar. Verifique que las filas de datos tengan valores."
       );
     }
   };
@@ -237,7 +241,7 @@ const App: React.FC = () => {
     }
 
     const blocks: string[] = [];
-    labels.forEach((label) => {
+    labels.filter(label => label.quantity > 0).forEach((label) => {
       const [line1, line2] = splitDescription(label.description);
       const qty = label.quantity;
       if (qty > 1) {
@@ -279,7 +283,7 @@ const App: React.FC = () => {
 
   return (
     <>
-      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8" style={{ background: '#F5F5F5', minHeight: '100vh' }}>
+      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8" style={{ background: '#F5F5F5', minHeight: '100vh', position: 'relative' }}>
         <header className="mb-8 text-center">
           <h1 className="text-4xl font-bold tracking-tight" style={{ color: '#388E3C', fontFamily: 'Montserrat, Arial, sans-serif', letterSpacing: 1 }}>
             Generador de Archivos para Etiquetas
@@ -412,14 +416,57 @@ const App: React.FC = () => {
                 <LabelCardEditable
                   key={label.id}
                   label={label}
-                  onDelete={handleRemoveLabel}
+                  onDelete={() => handleRemoveLabel(label.id)}
                   onQuantityChange={handleQuantityChange}
                 />
               ))}
             </div>
           </>
         )}
+
+        {/* Botón flotante en esquina inferior derecha */}
+        <button
+          onClick={() => setAddModalOpen(true)}
+          style={{
+            position: 'fixed',
+            right: 32,
+            bottom: 32,
+            zIndex: 100,
+            background: '#4CAF50',
+            color: '#fff',
+            borderRadius: '50%',
+            width: 60,
+            height: 60,
+            boxShadow: '0 4px 16px #388E3C44',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 32,
+            cursor: 'pointer',
+            transition: 'background 0.2s',
+          }}
+          aria-label="Agregar etiqueta manual"
+        >
+          <AddIcon fontSize="inherit" />
+        </button>
       </main>
+      <AddLabelModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onAdd={(data) => {
+          setLabels(currentLabels => [
+            ...currentLabels,
+            {
+              id: `label-manual-${Date.now()}`,
+              code: data.code,
+              description: data.description,
+              quantity: data.quantity,
+            }
+          ]);
+          setSuccess(null);
+        }}
+      />
     </>
   );
 };
