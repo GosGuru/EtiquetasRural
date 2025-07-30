@@ -154,30 +154,9 @@ const App: React.FC = () => {
     setSuccess(null);
   };
 
-  /**
-   * Genera y descarga el archivo TXT 100% compatible con Honeywell PM42 Fingerprint.
-   * - Cada comando va pegado, sin saltos de línea ni CR/LF entre comandos.
-   * - Se usan los caracteres de control ASCII requeridos:
-   *   STX (\x02): inicio de comando
-   *   ETX (\x03): fin de comando
-   *   ESC (\x1b): escape
-   *   LF  (\x0A): salto de línea SOLO para asignación de valor (F"TXx" o F"BRx")
-   *   US  (\x1f): separador de unidad (cantidad)
-   *   ETB (\x17): fin de bloque
-   *   CAN (\x18): cancel
-   * - No se agrega CR (\x0D), ni saltos visuales, ni BOM.
-   */
-  /**
-   * Genera y descarga el archivo TXT 100% compatible con Honeywell PM42.
-   * - Sin CR (\x0D), sin BOM, sin saltos extra.
-   * - Usa caracteres de control ASCII requeridos.
-   */
-  const handleDownloadTxt = () => {
-    setProcessing(true);
-    setError(null);
-    setSuccess(null);
 
-    // Caracteres de control como texto literal
+  // Helper para generar el bloque de impresión de etiquetas Honeywell PM42
+  function buildLabelBlock(code: string, line1: string, line2: string, qty: number): string {
     const STX = "<STX>";
     const ETX = "<ETX>";
     const ESC = "<ESC>";
@@ -185,9 +164,35 @@ const App: React.FC = () => {
     const US  = "<US>";
     const ETB = "<ETB>";
     const CAN = "<CAN>";
+    // Solo BR0, US = qty
+    return (
+      `${STX}${ESC}E1${CAN}${ETX}\r\n` +
+      `${STX}${ESC}F"BR0"${LF}${code}${ETX}\r\n` +
+      `${STX}${ESC}F"TX3"${LF}${line1}${ETX}\r\n` +
+      `${STX}${ESC}F"TX4"${LF}${line2}${ETX}\r\n` +
+      `${STX}${US}${qty}${ETX}\r\n` +
+      `${STX}${ETB}${ETX}\r\n`
+    );
+  }
+
+  /**
+   * Genera y descarga el archivo TXT compatible con Honeywell PM42 Fingerprint.
+   * - Solo usa BR0 para el código de barras.
+   * - US = cantidad exacta de etiquetas.
+   * - Un solo bloque por artículo.
+   */
+  const handleDownloadTxt = () => {
+    setProcessing(true);
+    setError(null);
+    setSuccess(null);
+
+    const STX = "<STX>";
+    const ETX = "<ETX>";
+    const ESC = "<ESC>";
+    const LF  = "<LF>";
     const SI  = "<SI>";
 
-    // Cabecera fija (idéntica a SAP)
+    // Cabecera fija (idéntica a SAP, pero solo BR0)
     const header = [
       `${STX}${SI}g1,420${ETX}`,
       `${STX}${SI}d5${ETX}`,
@@ -196,60 +201,17 @@ const App: React.FC = () => {
       `${STX}E1,1;A1,ETIQ2J;${ETX}`,
       `${STX}L39;D0;${ETX}`,
       `${STX}B0,BR0;o60,210;f1;c6,0;h50;w1;r0;i1;d0,12${ETX}`,
-      `${STX}B1,BR1;o60,480;f1;c6,0;h50;w1;r0;i1;d0,12${ETX}`,
-      `${STX}B2,BR2;o60,730;f1;c6,0;h50;w1;r0;i1;d0,12${ETX}`,
       `${STX}H3,TX3;o10,260;f1;c25;h8;w7;d0,25;${ETX}`,
       `${STX}H4,TX4;o30,260;f1;c25;h8;w7;d0,25;${ETX}`,
-      `${STX}H5,TX5;o10,530;f1;c25;h8;w7;d0,25;${ETX}`,
-      `${STX}H6,TX6;o30,530;f1;c25;h8;w7;d0,25;${ETX}`,
-      `${STX}H7,TX7;o10,790;f1;c25;h8;w7;d0,25;${ETX}`,
-      `${STX}H8,TX8;o30,790;f1;c25;h8;w7;d0,25;${ETX}`,
       `${STX}I0;o110,220;f1;c25;h12;w12;${ETX}`,
-      `${STX}I1;o110,490;f1;c25;h12;w12;${ETX}`,
-      `${STX}I2;o110,740;f1;c25;h12;w12;${ETX}`,
       `${STX}R${ETX}`,
       ""
     ];
 
-    // Genera bloques igual que el script Python
-    function buildMainBlock(code: string, line1: string, line2: string, qty: number): string {
-      return (
-        `${STX}${ESC}E1${CAN}${ETX}\r\n` +
-        `${STX}${ESC}F"BR0"${LF}${code}${ETX}\r\n` +
-        `${STX}${ESC}F"BR1"${LF}${code}${ETX}\r\n` +
-        `${STX}${ESC}F"BR2"${LF}${code}${ETX}\r\n` +
-        `${STX}${ESC}F"TX3"${LF}${line1}${ETX}\r\n` +
-        `${STX}${ESC}F"TX4"${LF}${line2}${ETX}\r\n` +
-        `${STX}${ESC}F"TX5"${LF}${line1}${ETX}\r\n` +
-        `${STX}${ESC}F"TX6"${LF}${line2}${ETX}\r\n` +
-        `${STX}${ESC}F"TX7"${LF}${line1}${ETX}\r\n` +
-        `${STX}${ESC}F"TX8"${LF}${line2}${ETX}\r\n` +
-        `${STX}${US}${qty}${ETX}\r\n` +
-        `${STX}${ETB}${ETX}\r\n`
-      );
-    }
-
-    function buildResidualBlock(code: string, line1: string, line2: string): string {
-      return (
-        `${STX}${ESC}E1${CAN}${ETX}\r\n` +
-        `${STX}${ESC}F"BR0"${LF}${code}${ETX}\r\n` +
-        `${STX}${ESC}F"TX3"${LF}${line1}${ETX}\r\n` +
-        `${STX}${ESC}F"TX4"${LF}${line2}${ETX}\r\n` +
-        `${STX}${US}1${ETX}\r\n` +
-        `${STX}${ETB}${ETX}\r\n`
-      );
-    }
-
     const blocks: string[] = [];
     labels.filter(label => label.quantity > 0).forEach((label) => {
       const [line1, line2] = splitDescription(label.description);
-      const qty = label.quantity;
-      if (qty > 1) {
-        blocks.push(buildMainBlock(label.code, line1, line2, qty - 1));
-        blocks.push(buildResidualBlock(label.code, line1, line2));
-      } else if (qty === 1) {
-        blocks.push(buildMainBlock(label.code, line1, line2, 1));
-      }
+      blocks.push(buildLabelBlock(label.code, line1, line2, label.quantity));
     });
 
     // Une cabecera y bloques, separados por CRLF
